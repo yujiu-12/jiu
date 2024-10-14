@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이모티콘 장애물 피하기 게임</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        #gameContainer {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            background-color: white;
+            border: 2px solid #333;
+        }
+        #player, .obstacle {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+        }
+        #startScreen, #gameOverScreen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        #instructions {
+            margin-top: 20px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="player">😊</div>
+        <div id="startScreen">
+            <h2>이모티콘 장애물 피하기 게임</h2>
+            <button onclick="startGame()">게임 시작</button>
+        </div>
+        <div id="gameOverScreen" style="display: none;">
+            <h2>게임 오버!</h2>
+            <button onclick="startGame()">다시 시작</button>
+        </div>
+    </div>
+    <div id="instructions">
+        <p>W, A, S, D 키를 사용하여 웃는 얼굴을 움직이세요.</p>
+        <p>화난 얼굴들을 피하세요!</p>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('gameContainer');
+        const player = document.getElementById('player');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const containerSize = 300;
+        const playerSize = 30;
+        const obstacleSize = 30;
+        const moveDistance = 5;
+        const obstacleSpeed = 1;
+
+        let gameStarted = false;
+        let gameOver = false;
+        let playerPos = { x: containerSize / 2 - playerSize / 2, y: containerSize / 2 - playerSize / 2 };
+        let obstacles = [];
+
+        function createObstacleElements() {
+            obstacles.forEach((obstacle, index) => {
+                const obstacleElement = document.createElement('div');
+                obstacleElement.className = 'obstacle';
+                obstacleElement.id = `obstacle${index}`;
+                obstacleElement.innerHTML = '😠'; // 화난 얼굴 이모티콘
+                gameContainer.appendChild(obstacleElement);
+            });
+        }
+
+        function updatePlayerPosition() {
+            player.style.left = `${playerPos.x}px`;
+            player.style.top = `${playerPos.y}px`;
+        }
+
+        function updateObstaclePositions() {
+            obstacles.forEach((obstacle, index) => {
+                const obstacleElement = document.getElementById(`obstacle${index}`);
+                obstacleElement.style.left = `${obstacle.x}px`;
+                obstacleElement.style.top = `${obstacle.y}px`;
+            });
+        }
+
+        function moveObstacles() {
+            obstacles = obstacles.map(obstacle => {
+                let newX = obstacle.x + obstacle.dx * obstacleSpeed;
+                let newY = obstacle.y + obstacle.dy * obstacleSpeed;
+                let newDx = obstacle.dx;
+                let newDy = obstacle.dy;
+
+                if (newX <= 0 || newX >= containerSize - obstacleSize) newDx *= -1;
+                if (newY <= 0 || newY >= containerSize - obstacleSize) newDy *= -1;
+
+                return { x: newX, y: newY, dx: newDx, dy: newDy };
+            });
+
+            updateObstaclePositions();
+        }
+
+        function checkCollision() {
+            return obstacles.some(obstacle =>
+                playerPos.x < obstacle.x + obstacleSize &&
+                playerPos.x + playerSize > obstacle.x &&
+                playerPos.y < obstacle.y + obstacleSize &&
+                playerPos.y + playerSize > obstacle.y
+            );
+        }
+
+        function gameLoop() {
+            if (!gameStarted || gameOver) return;
+
+            moveObstacles();
+
+            if (checkCollision()) {
+                gameOver = true;
+                gameOverScreen.style.display = 'flex';
+                return;
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function handleKeyPress(e) {
+            if (!gameStarted || gameOver) return;
+
+            switch(e.key) {
+                case 'w':
+                    if (playerPos.y > 0) playerPos.y -= moveDistance;
+                    break;
+                case 's':
+                    if (playerPos.y < containerSize - playerSize) playerPos.y += moveDistance;
+                    break;
+                case 'a':
+                    if (playerPos.x > 0) playerPos.x -= moveDistance;
+                    break;
+                case 'd':
+                    if (playerPos.x < containerSize - playerSize) playerPos.x += moveDistance;
+                    break;
+            }
+
+            updatePlayerPosition();
+        }
+
+        function generateObstacles() {
+            obstacles = [];
+            for (let i = 0; i < 3; i++) {
+                let x, y;
+                do {
+                    x = Math.floor(Math.random() * (containerSize - obstacleSize));
+                    y = Math.floor(Math.random() * (containerSize - obstacleSize));
+                } while (
+                    Math.abs(x - playerPos.x) < playerSize * 2 &&
+                    Math.abs(y - playerPos.y) < playerSize * 2
+                );
+
+                obstacles.push({
+                    x: x,
+                    y: y,
+                    dx: Math.random() > 0.5 ? 1 : -1,
+                    dy: Math.random() > 0.5 ? 1 : -1
+                });
+            }
+        }
+
+        function startGame() {
+            gameStarted = true;
+            gameOver = false;
+            playerPos = { x: containerSize / 2 - playerSize / 2, y: containerSize / 2 - playerSize / 2 };
+            updatePlayerPosition();
+
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+
+            document.querySelectorAll('.obstacle').forEach(el => el.remove());
+
+            generateObstacles();
+            createObstacleElements();
+            updateObstaclePositions();
+
+            gameLoop();
+        }
+
+        document.addEventListener('keydown', handleKeyPress);
+    </script>
+</body>
+</html>
